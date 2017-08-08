@@ -1,19 +1,5 @@
 Feature: Serve coffee
 
 Scenario: Buy last coffee
+    Given I open AUT
 
-  Background: User navigates to Facebook
-    Given I am on Facebook login page
-
-#Scenario with AND
-  Scenario:
-    When I enter username as "TOM"
-    And I enter password as "JERRY"
-    Then Login should fail
-
-#Scenario with BUT
-  Scenario:
-    When I enter username as "TOM"
-    And I enter password as "JERRY"
-    Then Login should fail
-    But Relogin option should be available
