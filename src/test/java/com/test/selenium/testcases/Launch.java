@@ -31,9 +31,9 @@ public class Launch {
         selenium.openBrowser();
     }
 
-    @And("^I test$")
-    public void iTest() throws Throwable {
 
-        System.out.println("Current Working Directory");
+    @And("^Quit AUT$")
+    public void quitAUT() throws Throwable {
+        selenium.quit();
     }
 }

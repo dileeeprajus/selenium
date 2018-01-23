@@ -8,6 +8,7 @@ package com.test.selenium.utills;
 import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.configuration.PropertiesConfiguration;
 import org.openqa.selenium.WebDriver;
+import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.safari.SafariDriver;
 
 
@@ -46,17 +47,29 @@ public class SeleniumUtils {
     public void openBrowser(){
         if(CONFIG.getProperty("Browsertype").equals("safari")){
 
-            System.out.println("Browser is Safari");
+            System.out.println("Opening Safari Browser...");
              driver = new SafariDriver();
              driver.manage().window().maximize();
-             driver.get("http://www.facebook.com");
-
-
 
         }
-        System.out.println("Inside Method OpenBrowser()");
-        System.out.println("Current Working Directory: "+System.getProperty("user.dir"));
-        System.out.println("AUT URL: "+CONFIG.getProperty("AutUrl").toString());
+        if(CONFIG.getProperty("Browsertype").equals("chrome")){
+
+            System.out.println("Opening Chrome Browser...");
+            System.out.println("Chrome Driver Path: "+System.getProperty("user.dir")+"\\src\\test\\resource\\drivers\\chromedriver.exe");
+
+            System.setProperty("webdriver.chrome.driver", System.getProperty("user.dir")+"\\src\\test\\resource\\drivers\\chromedriver.exe");
+            driver = new ChromeDriver();
+
+            driver.manage().window().maximize();
+        }
+        System.out.println("Opening URL: "+CONFIG.getProperty("AutUrl").toString());
+        driver.get(CONFIG.getProperty("AutUrl").toString());
+    }
+
+    public void quit(){
+        if(driver != null){
+            driver.quit();
+        }
     }
 
 
