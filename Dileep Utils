@@ -1,0 +1,946 @@
+package utills;
+        import org.apache.commons.configuration.ConfigurationException;
+        import org.apache.commons.configuration.PropertiesConfiguration;
+        import org.apache.commons.configuration.reloading.FileChangedReloadingStrategy;
+        import org.junit.Assert;
+        import org.openqa.selenium.*;
+        import org.openqa.selenium.chrome.ChromeDriver;
+        import org.openqa.selenium.chrome.ChromeOptions;
+        import org.openqa.selenium.firefox.FirefoxBinary;
+        import org.openqa.selenium.firefox.FirefoxDriver;
+        import org.openqa.selenium.firefox.FirefoxProfile;
+        import org.openqa.selenium.interactions.Actions;
+        import org.openqa.selenium.remote.CapabilityType;
+        import org.openqa.selenium.remote.DesiredCapabilities;
+        import org.openqa.selenium.remote.RemoteWebDriver;
+        import org.openqa.selenium.support.ui.ExpectedConditions;
+        import org.openqa.selenium.support.ui.Select;
+        import org.openqa.selenium.support.ui.WebDriverWait;
+        import java.io.*;
+        import java.util.*;
+        import java.net.MalformedURLException;
+        import java.util.concurrent.TimeUnit;
+
+        import org.openqa.selenium.By;
+        import org.openqa.selenium.WebDriver;
+
+public class SeleniumUtils {
+    public static WebDriver driver;
+     static SeleniumUtils TSU;
+    public String parentWindowHandle = null;
+    public static String pathClassic ="/src/test/java/";
+    public static String pathConfig = pathClassic+"config/";
+    public static String pathObjRepo = pathClassic+"objectrepository";
+    public static String pathResources ="/src/test/resource/";
+    public static String pathDriver = pathResources+"Drivers/";
+    String configPath = "/src/test/java/config/config.properties";
+    static PropertiesConfiguration CONFIG = null;
+    Actions actions = null;
+
+    private SeleniumUtils() throws InterruptedException, ConfigurationException {
+        try {
+
+            CONFIG = new PropertiesConfiguration(System.getProperty("user.dir")+configPath);
+            CONFIG.setDelimiterParsingDisabled(true);
+            CONFIG.setAutoSave(true);
+            CONFIG.setReloadingStrategy(new FileChangedReloadingStrategy());
+
+        } catch (ConfigurationException e) {
+            e.printStackTrace();
+        }
+
+    }
+
+    public static SeleniumUtils getInstance() throws ConfigurationException, InterruptedException {
+        if (TSU == null){TSU = new SeleniumUtils();}
+        return TSU;
+    }
+
+    public static WebDriver getDriver() {
+        return driver;
+    }
+    public void setDriver(WebDriver driver) {
+        SeleniumUtils.driver =driver;
+    }
+    public static PropertiesConfiguration getCONFIG(){
+        return CONFIG;
+    }
+
+    public void openBrowser() throws MalformedURLException{
+        //Opening the browser
+        String BrowserType = (String) CONFIG.getProperty("BrowserType");
+        if (BrowserType.equalsIgnoreCase("firefox")) {
+//            /***************************Using Gecko driver***********************/
+            System.setProperty("webdriver.gecko.driver",System.getProperty("user.dir") + pathDriver + "geckodriver.exe");
+            DesiredCapabilities cap=DesiredCapabilities.firefox();
+            cap.setAcceptInsecureCerts(true);
+            FirefoxProfile profile = new FirefoxProfile();
+            profile.setPreference("browser.download.folderList", 2);
+            profile.setPreference("webdriver.load.strategy", "conservative");
+            profile.setPreference("browser.download.manager.alertOnEXEOpen", false);
+//            profile.setPreference("browser.helperApps.neverAsk.saveToDisk", "application/pdf");
+            profile.setPreference("browser.download.manager.showWhenStarting", false);
+            profile.setPreference("browser.download.manager.focusWhenStarting", false);
+            profile.setPreference("browser.download.useDownloadDir", true);
+            profile.setPreference("browser.helperApps.alwaysAsk.force", false);
+            profile.setPreference("browser.helperApps.neverAsk.saveToDisk", "application/zip,application/pdf,text/csv, application/ms-excel, application/vnd.ms-excel, application/msword,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" );
+            profile.setPreference("browser.download.manager.alertOnEXEOpen", false);
+            profile.setPreference("browser.download.manager.closeWhenDone", true);
+            profile.setPreference("browser.download.manager.useWindow", false);
+            profile.setPreference("services.sync.prefs.sync.browser.download.manager.showWhenStarting", false);
+//            profile.setEnableNativeEvents(true);
+            FirefoxBinary binary = new FirefoxBinary();
+            driver = new FirefoxDriver(binary,profile,cap);
+
+        } else if (BrowserType.equalsIgnoreCase("chrome")) {
+
+            System.setProperty("webdriver.chrome.driver", System.getProperty("user.dir") + pathDriver + "chromedriver.exe");
+            HashMap<String, Object> chromePrefs = new HashMap<String, Object>();
+            chromePrefs.put("profile.default_content_settings.popups", 0);
+            ChromeOptions options = new ChromeOptions();
+            options.setExperimentalOption("excludeSwitches","disable-popup-blocking");
+
+            HashMap<String, Object> chromeOptionsMap = new HashMap<String, Object>();
+            options.addArguments("test-type");
+            DesiredCapabilities cap = DesiredCapabilities.chrome();
+
+            cap.setCapability(ChromeOptions.CAPABILITY, chromeOptionsMap);
+            cap.setCapability(CapabilityType.ACCEPT_SSL_CERTS, true);
+            cap.setCapability(ChromeOptions.CAPABILITY, options);
+            //driver = new ChromeDriver(cap);
+            driver = new ChromeDriver();
+
+        }
+
+        driver.manage().window().maximize();
+        driver.manage().timeouts().implicitlyWait(10, TimeUnit.SECONDS);
+
+            }
+
+    /* Given the String Property Key this method returns the property value
+     * Parameters  : String strPropertyKey
+     * Example	   : getPropertyValue("testApplication")
+     * Returns 	   : String strPropertyValue
+     *========================================================================================
+     */
+    public String getPropertyValue(String strPropertyKey) {
+        return CONFIG.getProperty(strPropertyKey).toString();
+    }
+
+    /* Given the property name and property value this method updates the config file
+     * Parameters  : String PropertyName, String PropertyValue
+     * Examples	   : setPropertyValue("BrowserType", "firefox")
+     * Returns 	   : NA
+     * Modification log:
+     *========================================================================================
+     */
+    public void setPropertyValue(String strPropertyKey, String strPropertyValue) throws IOException, ConfigurationException {
+        CONFIG.setProperty(strPropertyKey,strPropertyValue);
+    }
+
+    public void click(By ObjectName) throws Throwable {
+        /*int j = 0;
+        boolean flag=false;
+        do {
+
+            if (isElementVisible(ObjectName)) {
+            WebDriverWait wait = new WebDriverWait(driver, 30);
+            wait.until(ExpectedConditions.elementToBeClickable(ObjectName));
+                driver.findElement(ObjectName).click();
+                System.out.println("\n Element: "+ObjectName+" Clicked");
+                flag=true;
+                break;
+            }
+            j++;
+            Thread.sleep(1000);
+        } while (j < 5);
+
+        if(flag==false){
+//            throw new ElementNotVisibleException("element : " + ObjectName + " is not visible: ");
+        }*/
+        if(isElementPresent(ObjectName))
+            driver.findElement(ObjectName).click();
+        else
+            driver.findElement(ObjectName).click();
+        System.out.println("element : " + ObjectName + " is not visible: ");
+        Thread.sleep(500);
+    }
+
+    /****/
+    public void click(By objectName, int elemIndex) throws Throwable {
+        //10000 select the max index
+        //By object = getORObject(ObjectName);
+        // WebDriverWait wait = new WebDriverWait(driver, 10);
+        //wait.until(ExpectedConditions.elementToBeClickable(object));
+        List<WebElement> elements = driver.findElements(objectName);
+        if(elemIndex==1000){
+            System.out.println("Number of elements :" + elements.size());
+            elemIndex = elements.size()-1;
+        }
+        WebElement element1 = elements.get(elemIndex);
+        element1.click();
+        Thread.sleep(1000);
+    }
+
+    public void input(By ObjectName, String text) throws Throwable {
+        WebDriverWait wait = new WebDriverWait(driver, 25);
+        wait.until(ExpectedConditions.elementToBeClickable(ObjectName) );
+        driver.findElement(ObjectName).clear();
+        driver.findElement(ObjectName).sendKeys(text);
+    }
+
+    /***Using By parameter***/
+    public String getText(By ObjectName) throws Throwable {
+        //driver.findElement(by).click() we will use this if we want to pass with selector
+        //By object = getORObject(ObjectName);//for now making it to constant with xpath
+        WebDriverWait wait = new WebDriverWait(driver, 30);
+        wait.until(ExpectedConditions.presenceOfElementLocated(ObjectName) );
+        String sText = driver.findElement(ObjectName).getText();
+        //System.out.println( ObjectName +" : -->" + sText );
+        return sText;
+    }
+
+    /***Using By parameter***/
+    public String getAttributeValue(By ObjectName, String Attribute) throws Throwable {
+        //driver.findElement(by).click() we will use this if we want to pass with selector
+        //By object = getORObject(ObjectName);
+        //System.out.println( ObjectName +" : -->" + sText );
+        try {
+            return driver.findElement(ObjectName).getAttribute(Attribute);
+        }catch (Exception e){
+            return  "NO ATTRIBUTE";
+        }
+    }
+
+    public String getAttributeValue(By objectName,String Attribute, int elemIndex) throws Throwable {
+        //10000 select the max index
+        //By object = getORObject(ObjectName);
+        List<WebElement> elements = driver.findElements(objectName);
+        if(elemIndex==1000){elemIndex = elements.size()-1;}
+        WebElement element1 = elements.get(elemIndex);
+        try {
+            return element1.getAttribute(Attribute);
+        }catch (Exception e){
+            return  "NO ATTRIBUTE";
+        }
+
+    }
+
+    /***Using By parameter***/
+    public boolean isElementPresent(By ObjectName) throws Throwable {
+        //By object = getORObject(ObjectName);
+        // boolean ObjectVisible = false;
+        int count = 0;
+        try {
+            WebDriverWait wait = new WebDriverWait(driver, 60);
+            wait.until(ExpectedConditions.visibilityOfElementLocated(ObjectName) );
+        } catch (Throwable e) {
+            System.out.println(e.getMessage());
+        }
+        try {
+            count = driver.findElements(ObjectName).size();
+        } catch (Throwable e) {
+            System.out.println(e.getMessage());
+        }
+
+        if (count == 0) {
+            return false;
+        } else {
+            System.out.println(ObjectName + " : element is present");
+            return true;
+        }
+    }
+
+    /***Using By parameter***/
+    public boolean isElementVisible(By ObjectName) throws Throwable {
+        //By object = getORObject(ObjectName);
+        boolean ObjectVisible = false;
+        try {
+            WebDriverWait wait = new WebDriverWait(driver, 10);
+            WebElement element = wait.until(ExpectedConditions.presenceOfElementLocated(ObjectName) );
+            ObjectVisible = element.isDisplayed();
+
+        } catch (Throwable e) {
+            ObjectVisible = false;
+        }
+        System.out.println("element : " + ObjectName + " is visible: " + ObjectVisible );
+        return ObjectVisible;
+    }
+
+    /***Using By parameter***/
+    public boolean isElementClickable(By ObjectName) throws Throwable {
+        //By object = getORObject(ObjectName);
+        boolean ObjectClickable = false;
+        try {
+            WebDriverWait wait = new WebDriverWait(driver, 5);
+            WebElement element = wait.until(ExpectedConditions.elementToBeClickable(ObjectName) );
+            ObjectClickable = true;
+
+        } catch (Throwable e) {
+            ObjectClickable = false;
+        }
+        System.out.println("element : " + ObjectName + " is visible: " + ObjectClickable );
+        return ObjectClickable;
+    }
+
+    /* sends a tab key on the given object
+     * Parameters  : String ObjectName
+     * Examples	   : SendTabKeytoObject("HRRepo.btntsHome")
+     * Returns 	   : NA
+     * Modification log:
+     *========================================================================================
+     *Date		|	           Description						        |  Author
+     *=========================================================================================
+    */
+
+    /* Exits/Closes the browser
+     * Parameters  : NA
+     * Examples	   : NA
+     * Returns 	   : NA
+     * Modification log:
+     *========================================================================================
+     *Date		|	           Description						        |  Author
+     *=========================================================================================
+   */
+    public void quitAUT() {
+        System.out.println("Closing browser window");
+        //driver.close();
+        driver.quit();
+    }
+
+	/* Given the property names and values with a delimiter updates the config file
+	 * Parameters  : String PropertyNames, String PropertyValues(delimiter ^)
+	 * Examples	   : setPropertyValue("BrowserType^Server", "firefox,dit")
+	 * Returns 	   : NA
+	 * Modification log:
+	 *========================================================================================
+	 *Date		|	           Description						        |  Author
+	 *=========================================================================================
+      */
+	/* Given the Actual,Expected Value and log message compares both
+	 * Parameters  : String ActualValue, String ExpectedValue, String Message
+	 * Examples	   : VerifyActualExpected("Home", "Home","Home page Title")
+	 * Returns 	   : NA
+	 * Modification log:
+	 *========================================================================================
+	 *Date		|	           Description						        |  Author
+	 *=========================================================================================
+	 */
+    public void VerifyActualExpected(String ActualValue, String ExpectedValue, String Message)  {
+
+        String Actual = ActualValue.toLowerCase().trim();
+        String Expected = ExpectedValue.toLowerCase().trim();
+        System.out.println("Comparing "+Actual+" : "+Expected);
+        boolean compare = (Actual.contains(Expected));
+        /*---------------------------------*/
+
+        if (compare) {
+            Assert.assertTrue(Message + " Validation passed for : " + ActualValue, true);
+            System.out.println(Message + " Validation passed for expected Text : " + ExpectedValue + "  : Actual text :" + ActualValue);
+           /*---------------------------------*/
+           /* try {
+                rallyUtils.updateRallyTestCase(testCaseId, "Pass");
+            } catch (Throwable throwable) {
+                throwable.printStackTrace();
+            }*/
+            /*---------------------------------*/
+        } else {
+            Assert.assertFalse(Message + " Validation failed for expected Text : " + ExpectedValue + "  : Actual text :" + ActualValue, true);
+            /*---------------------------------*/
+            /*try {
+                rallyUtils.updateRallyTestCase(testCaseId, "Fail");
+            } catch (Throwable throwable) {
+                throwable.printStackTrace();
+            }*/
+            /*---------------------------------*/
+        }
+    }
+
+    /***Using By parameter***/
+    public void waitForObjectAttributeValue(By ObjectName, String Attribute, String ValuetoLookFor) throws Throwable {
+        //By object = getORObject(ObjectName);
+        String a = driver.findElement(ObjectName).getAttribute(Attribute).toLowerCase();
+
+        int count = 1;
+        while (!(a.contains(ValuetoLookFor.toLowerCase()))) {
+            System.out.println("Count is: " + count + " <---" + ValuetoLookFor + "--->  " + a);
+            a = driver.findElement(ObjectName).getAttribute(Attribute).toLowerCase();
+            count++;
+            Thread.sleep(1000);
+            if (count == 60) {
+                System.out.println("not able to find the object :" + ObjectName + "in 60 seconds");
+                break;
+            }
+        }
+    }
+
+    public void waitForObject(By ObjectName) throws Throwable {
+        //By object = getORObject(ObjectName);
+        int waitTime=Integer.parseInt(CONFIG.getProperty("Object_Wait_Time").toString());
+        int count = 1;
+        boolean elementFound = false;
+        while (!elementFound) {
+            System.out.println("waiting for element :"+ ObjectName + ".... counter :"+ count);
+            //Thread.sleep(1000);
+            //elementFound = isElementPresent(ObjectName);
+            elementFound = isElementPresent(ObjectName);
+            if (elementFound) {
+                break;
+
+            }else if (count == waitTime){
+                System.out.println("not able to find the object :" + ObjectName + "in 60 seconds");
+                break;
+            }
+            count++;
+        }
+    }
+
+    /***Using By parameter***/
+    public void waitForObject(By ObjectName, int nTime) throws Throwable {
+        //By object = getORObject(ObjectName);
+        int count = 1;
+        boolean elementFound = isElementPresent(ObjectName);
+        while (!elementFound) {
+            System.out.println("waiting for element :" + ObjectName + ".... counter :" + count);
+            //Thread.sleep(1000);
+            //elementFound = isElementPresent(ObjectName);
+            elementFound = isElementPresent(ObjectName);
+            if (elementFound) {
+                break;
+
+            } else if (count == nTime) {
+                System.out.println("not able to find the object :" + ObjectName + "in "+nTime+" seconds");
+                break;
+            }
+            count++;
+        }
+    }
+
+    /* Given the ObjectName  waits till object is present
+    * Parameters  : String ObjectName
+    * Examples	   : waitTillObjectexits("UnvRepo.Home")
+    * Returns 	   : NA
+    * Modification log:
+    *========================================================================================
+    *Date		|	           Description						        |  Author
+    *=========================================================================================
+    */
+    /***Using By parameter***/
+    public void waitTillObjectexits(By ObjectName) throws Throwable {
+        Thread.sleep(1000);
+        //By object = getORObject(ObjectName);
+        int count = 1;
+        boolean elementFound = isElementPresent(ObjectName);
+        while (elementFound) {
+            //System.out.println("object :" + ObjectName + " still exits");
+            Thread.sleep(1000);
+            elementFound = isElementPresent(ObjectName);
+            if (!elementFound){
+                break;
+            }else if (count == 5){
+                System.out.println("object :" + ObjectName + " still exits after 60 seconds");
+                break;
+            }
+            count++;
+        }
+    }
+
+    public void waitTillObjectVisible(By ObjectName) throws Throwable{
+        boolean isElementVisisble = isElementVisible(ObjectName);
+        int count = 1;
+        while(isElementVisisble){
+            Thread.sleep(200);
+            isElementVisisble = isElementVisible(ObjectName);
+            if (!isElementVisisble){
+                break;
+            }else if (count == 5000){
+                System.out.println("object :" + ObjectName + " still Visible after 5000 seconds");
+                break;
+            }
+            count++;
+        }
+    }
+
+    public void waitTillObjectClickable(By ObjectName) throws Throwable{
+        boolean isElementVisisble = isElementClickable(ObjectName);
+        int count = 1;
+        while(!isElementVisisble){
+            Thread.sleep(2000);
+            isElementVisisble = isElementClickable(ObjectName);
+            if (isElementVisisble){
+                break;
+            }else if (count == 90){
+                System.out.println("object :" + ObjectName + " still Not Clikcable after 300 seconds");
+                break;
+            }
+            count++;
+        }
+    }
+
+    public void waitTillObjectexits(By objectName, int nTIme) throws Throwable {
+        Thread.sleep(1000);
+        //By object = getORObject(ObjectName);
+        int count = 1;
+        boolean elementFound = isElementPresent(objectName);
+        while (elementFound) {
+            // System.out.println(count);
+            Thread.sleep(1000);
+            elementFound = isElementPresent(objectName);
+            if (!elementFound) {
+                break;
+            } else if (count == nTIme) {
+                System.out.println("object :" + objectName + " still exits after 60 seconds");
+                break;
+            }
+            count++;
+        }
+    }
+
+    public boolean isElementDisplayed(By objectName) throws Throwable {
+        //By object = getORObject(ObjectName);
+        WebDriverWait wait = new WebDriverWait(driver, 10);
+        wait.until(ExpectedConditions.visibilityOfElementLocated(objectName) );
+        WebElement WE = driver.findElement(objectName);
+        System.out.println("element : " + objectName + " is " + WE.isDisplayed() );
+        return  WE.isDisplayed();
+    }
+
+
+    public void checkBoxSelection(String chkBoxStatus, By ObjectName) throws Throwable {
+
+        boolean  isSelected ;
+
+        isSelected = driver.findElement(ObjectName).isSelected();
+
+        String ischBoxSelected ="";
+        if (isSelected){
+            ischBoxSelected = "on";
+        }else{
+            ischBoxSelected = "off";
+        }
+
+        if (!chkBoxStatus.toLowerCase().equals(ischBoxSelected)) {
+            driver.findElement(ObjectName).click();
+        }
+    }
+
+    public boolean isCheckboxSelected(By Object) throws Throwable {
+
+        String status = getAttributeValue(Object,"checked");
+        if (status==null) {
+            return false;
+        }else return status.equals("true");
+    }
+
+    /***Using By parameter***/
+    public void ListBoxItemSelection(By objectName, String value) throws Throwable {
+        //By Objectname = getORObject(objectName);
+        WebDriverWait wait = new WebDriverWait(driver, 15);
+        wait.until(ExpectedConditions.presenceOfElementLocated(objectName) );
+        Select ListBox = new Select(driver.findElement(objectName));
+        ListBox.selectByVisibleText(value);
+    }
+
+   /* switch the window handle to frame given  the frame ID
+  * Parameters  :
+  * Examples	   :
+  * Returns 	   : String(Date)
+  * Modification log:
+  *========================================================================================
+  *Date		|	           Description						        |  Author
+  *=========================================================================================
+  */
+    public void switchToFrameById(String frameId) {
+        driver.switchTo().frame(driver.findElement(By.id(frameId)));
+    }
+
+    /* switch the window handle to frame given  the frame xpath
+  * Parameters  :
+  * Examples	   :
+  * Returns 	   : String(Date)
+  * Modification log:
+  *========================================================================================
+  *Date		|	           Description						        |  Author
+  *=========================================================================================
+  */
+    public void switchToFrameByXpath(String Xpath) {
+        driver.switchTo().frame(driver.findElement(By.xpath(Xpath)));
+    }
+
+    /* switch the window handle to frame based on index(used when there is no name for frame)
+     * Parameters  :
+     * Examples	   :
+     * Returns 	   : String(Date)
+     * Modification log:
+     *========================================================================================
+     *Date		|	           Description						        |  Author
+     *========================================================================================
+   */
+
+    public void switchToFrameByIndex(int frameIndex) throws InterruptedException {
+        driver.switchTo().frame(frameIndex);
+    }
+
+    public void verifyWindowTitle(String expectedTitle) {
+
+        String ActualTitle = driver.getTitle();
+        VerifyActualExpected(ActualTitle, expectedTitle, "Comparing Window Title with Expected Value");
+
+    }
+
+    public void verifyWindowURL(String expectedURL) {
+
+        String ActualTitle = driver.getCurrentUrl();
+        VerifyActualExpected(ActualTitle, expectedURL, "Comparing Window URL with Expected Value");
+
+    }
+    public void verifyWindowURLContains(String expectedURL, String Message) {
+
+        String ActualTitle = driver.getCurrentUrl();
+        Assert.assertTrue(Message,ActualTitle.contains(expectedURL));
+
+    }
+
+    public String getWindowURL(){
+        return   driver.getCurrentUrl();
+    }
+
+	/* Perform alert action(alert can be deleted)
+	 * Parameters  :
+	 * Examples	   :
+	 * Returns 	   : String(Date)
+	 * Modification log:
+	 *========================================================================================
+	 *Date		|	           Description						        |  Author
+	 *=========================================================================================
+    */
+
+    public void switchToAlertAndPerformOperation(String operation) throws InterruptedException {
+        Thread.sleep(1000);
+        Alert alert = driver.switchTo().alert();
+        if (operation.equals("Accept") ){
+            alert.accept();
+        }
+        else if(operation.equals("Dismiss") ){
+            alert.dismiss();
+        }
+    }
+
+    /* execute a javascript on a object
+     * Parameters  :
+     * Examples	   :
+     * Returns 	   :
+     * Modification log:
+     *========================================================================================
+     *Date		|	           Description						        |  Author
+     *=========================================================================================
+   */
+
+    /* get the parent window title
+    * Parameters  :
+    * Examples	   :
+    * Returns 	   :
+    * Modification log:
+    *========================================================================================
+    *Date		|	           Description						        |  Author
+    *=========================================================================================
+    */
+    public String getParentWindowHandle(){
+        String parentWindowHandle = driver.getWindowHandle(); // save the current window handle.
+        return parentWindowHandle;
+    }
+
+	/* Given the parent window title switch to child window
+	 * Parameters  :
+	 * Examples	   :
+	 * Returns 	   :
+	 * Modification log:
+	 *========================================================================================
+	 *Date		|	           Description						        |  Author
+	 *=========================================================================================
+     */
+
+    public void SwitchToChildWindow(String parentWindowHandle) throws Throwable {
+        WebDriver popup = null;
+        boolean blnPopupWindowFound = false;
+        Set<String> windowSet = driver.getWindowHandles();
+        Iterator<String> windowIterator = windowSet.iterator();
+        while (windowIterator.hasNext()) {
+            String windowHandle = windowIterator.next();
+            System.out.println(windowHandle);
+            if (!parentWindowHandle.equals(windowHandle)) {
+                popup = driver.switchTo().window(windowHandle);
+                blnPopupWindowFound = true;
+                break;
+            }
+        }
+    }
+
+    //Need to delete after updating the code
+    public void switchToNewWindow() throws InterruptedException {
+
+        parentWindowHandle = driver.getWindowHandle();
+        for (String winHandle : driver.getWindowHandles()) {
+            if(!winHandle.equals(parentWindowHandle))
+                driver.switchTo().window(winHandle);
+        }
+        Thread.sleep(2000);
+    }
+
+    public void CloseAndSwitchToOldWindow() {
+        System.out.println("Closing Child Window if Exists");
+        if(driver.getWindowHandles().size()>1){                     //Added by To makesure that always a child window exist before we close a main window
+            driver.close();
+        }
+        System.out.println("Switching Back to Parent Window with handle: "+parentWindowHandle);
+        driver.switchTo().window(parentWindowHandle);
+
+    }
+
+    /* Given the parent window title switch to window
+         * Parameters  :
+         * Examples	   :
+         * Returns 	   :
+         * Modification log:
+         *========================================================================================
+         *Date		|	           Description						        |  Author
+         *=========================================================================================
+    */
+
+    public void SwitchToParentWindow(String parentWindowHandle) throws Throwable {
+        driver.switchTo().window(parentWindowHandle);
+    }
+
+ /* Given the parent window title switch to window
+ * Parameters  :
+ * Examples	   :
+ * Returns 	   :
+ * Modification log:
+ *========================================================================================
+ *Date		|	           Description						        |  Author
+ *=========================================================================================
+ */
+
+    public void SwitchToParentWindow() throws Throwable {
+        driver.switchTo().window(parentWindowHandle);
+    }
+
+    /* Close Child Window And Switch To Parent Window
+     * Parameters  :
+     * Examples	   :
+     * Returns 	   :
+     * Modification log:
+     *========================================================================================
+     *Date		|	           Description						        |  Author
+     *=========================================================================================
+     */
+    public void CloseChildWindowAndSwitchToParentWindow() {
+        if(driver.getWindowHandles().size()>1) {
+            driver.close();
+            driver.switchTo().window(parentWindowHandle);
+        }
+    }
+
+    /***Using By parameter
+     * @param ObjectName***/
+
+  /* Method to check if a file exits
+       * Parameters  : file location, and delete option
+       * Examples	   : FileExits("C:\test.txt",true)
+       * Returns 	   : boolean
+       * Modification log:
+       *========================================================================================
+       *Date: 2/3/2015      |       Description				    |           Author: Sridhar
+       *=========================================================================================
+   */
+
+    public boolean FileExits(File FileName, boolean deleteFile) {
+
+        File f = FileName;
+        deleteFile = false;
+        boolean fileExits = false;
+        try{
+            fileExits = f.exists();
+            // prints
+            System.out.println("File exists: "+fileExits);
+            if(fileExits == true  && deleteFile ==true )
+            {
+                // delete() invoked
+                f.delete();
+                System.out.println("delete() invoked");
+            }
+            // tests if file exists
+            // fileExits = f.exists();
+            //System.out.print("File is deleted: "+fileExits);
+        }catch(Exception e){
+            // if any error occurs
+            e.printStackTrace();
+        }
+        return fileExits;
+    }
+
+    /***Using By parameter***/
+    public void verifyElementPresence(By ObjectName) throws Throwable {
+        //By object = getORObject(ObjectName);
+        int count = 0;
+        try {
+            WebDriverWait wait = new WebDriverWait(driver, 30);
+            wait.until(ExpectedConditions.presenceOfElementLocated(ObjectName) );
+            count = driver.findElements(ObjectName).size();
+        } catch (Throwable e) {
+            System.out.println(e.getMessage());
+        }
+        if (count == 0) {
+            Assert.assertTrue("Element is Not present"+ObjectName,false);
+
+        } else {
+            System.out.println(ObjectName + " : element is present");
+
+        }
+    }
+    /***Using String parameter***/
+
+    public void clearTextField(By ObjectName) throws Throwable {
+        //By object = getORObject(ObjectName);
+        driver.findElement(ObjectName).clear();
+    }
+
+    public void ConcatenateMultiplePropertyValues(String PropertyValue) throws Throwable {
+//        System.out.println((String) CONFIG.getProperty(PropertyValue));
+        //System.out.println("&&&&&&&&&&&");
+//        System.out.println(CONFIG.getProperties(PropertyValue));
+//        System.out.println(a.values());
+//        Properties p = CONFIG.getProperties(PropertyValue);
+        System.out.println(CONFIG.getProperty(PropertyValue));
+//        for(int i=0;i<p.size();i++){
+//            System.out.println(p.get(i));
+//        }
+//        System.out.println(p);
+//        p.list(System.out);
+    }
+
+
+    public int getElementCount(By ObjectName) throws Throwable {
+        //10000 select the max index
+        //By object = getORObject(ObjectName);
+        List<WebElement> elements = driver.findElements(ObjectName);
+
+        return elements.size();
+    }
+
+
+    public void clear(By ObjectName) throws Throwable {
+        //By object = getORObject(ObjectName);
+        try{
+            driver.findElement(ObjectName).clear();
+        }catch (Exception e){
+            driver.findElement(ObjectName).sendKeys("");
+        }
+    }
+
+
+    public void verifyElementPresence(By ObjectName,String description) throws Throwable {
+        //By object = getORObject(ObjectName);
+        int count = 0;
+        try {
+            WebDriverWait wait = new WebDriverWait(driver, 30);
+            wait.until(ExpectedConditions.presenceOfElementLocated(ObjectName) );
+            count = driver.findElements(ObjectName).size();
+        } catch (Throwable e) {
+            System.out.println(e.getMessage());
+        }
+        if (count == 0) {
+            Assert.assertTrue("Element is Not present",false);
+
+        } else {
+            System.out.println(description + " : element is present");
+
+        }
+    }
+    public void refreshPage(){
+        driver.navigate().refresh();
+    }
+
+    public void mouseHoverOver(By ObjectName)throws  Throwable{
+        actions=new Actions(driver);
+        WebElement element=driver.findElement(ObjectName);
+        actions.moveToElement(element).build().perform();
+        Thread.sleep(3000);
+    }
+
+    public void pressEnter(){
+        actions=new Actions(driver);
+        actions.sendKeys(Keys.ENTER).build().perform();
+    }
+
+    public void verifyWindowURLContains(String expectedURL) {
+
+        String ActualTitle = driver.getCurrentUrl();
+        Assert.assertTrue(ActualTitle.contains(expectedURL));
+
+    }
+    public String getBrowserName(){
+        //  Return Values e.g: firefox
+        Capabilities cap = ((RemoteWebDriver) driver).getCapabilities();
+        return cap.getBrowserName();
+    }
+    public void checkAllCheckBoxes(By objectName){
+        List<WebElement> checkBoxList= driver.findElements(objectName);
+        for(WebElement checkBox:checkBoxList)
+        {
+            try {
+                if(!checkBox.isSelected()) {
+                    checkBox.click();
+                }
+            }catch (Exception e){
+
+            }
+
+        }
+    }
+
+    public static  boolean isFileDownloadedInDownloadsFolder(String fileName) throws InterruptedException {
+        boolean flag = false;
+        String sauceDownloadPath=CONFIG.getProperty("sauceDownloadPath").toString();
+        if(CONFIG.getProperty("BrowserType").toString().contains("saucelab"))
+        {
+            getDriver().get(sauceDownloadPath);
+            int size=getDriver().findElements(By.xpath("//*[text()='"+fileName+"']")).size();
+            flag = size >= 1;
+            getDriver().navigate().back();
+            //seleniumUtils.getDriver().switchTo().window(parentWindow);
+        }
+        else {
+            String downloadedPath = CONFIG.getProperty("docDownloadPath").toString();
+            System.out.println("downloadPath: " + CONFIG.getProperty("docDownloadPath").toString());
+            File dir = new File(downloadedPath);
+            int j = 0;
+            do{                                                     //Added Do...While to make sure to wait till the file download completes
+                File[] dir_contents = dir.listFiles();
+                for (int i = 0; i < dir_contents.length; i++) {
+//                System.out.println("dir_contents[i].getName(): " + dir_contents[i].getName());
+                    if (dir_contents[i].getName().contains(fileName)) {
+                        flag = true;
+                        return flag;
+                    }
+                }
+                j++;
+                Thread.sleep(1000);
+            }while(j<15);
+        }
+        return flag;
+    }
+
+    public   String getFileNameWithMatchingText(String fileName, String filePath) throws InterruptedException {
+
+        File dir = new File(filePath);
+        File[] dir_contents = dir.listFiles();
+        for (int i = 0; i < dir_contents.length; i++) {
+            if (dir_contents[i].getName().contains(fileName)) {
+                System.out.println("dir_contents[i].getName(): " + dir_contents[i].getName());
+                return dir_contents[i].getName();
+            }
+        }
+        return "File Not Found";
+    }
+}
